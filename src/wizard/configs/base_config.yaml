@@ -335,6 +335,16 @@ runtime:
     # Actors present shorter than this (in micro-seconds) are ignored. Set to 0 to disable.
     min_traffic_duration_us: 3_000_000
 
+    # Local addition: offset one non-ego actor to generate a scene variant.
+    # Inert unless actor_id is set. Override from the CLI, e.g.
+    #   runtime.simulation_config.perturbation.actor_id=1234
+    perturbation:
+      actor_id: ""
+      time_shift_s: 0.0
+      lateral_offset_m: 0.0
+      longitudinal_offset_m: 0.0
+      log_actor_inventory: false
+
     assert_zero_decision_delay: true
 
     physics_update_mode: "EGO_ONLY"

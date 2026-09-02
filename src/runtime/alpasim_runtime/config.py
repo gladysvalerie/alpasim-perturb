@@ -297,6 +297,25 @@ class ForceGtFrameCacheConfig:
 
 
 @dataclass
+class PerturbationConfig:
+    """Offset one non-ego actor's track to create a scene variant.
+
+    Inert by default: empty actor_id means no perturbation is applied.
+    """
+
+    # track_id to perturb. "" = disabled, "*" = every non-static actor.
+    actor_id: str = ""
+    # Negative = actor arrives earlier relative to ego. Keep within +/-3 s:
+    # beyond that a large share of a 20 s clip clamps at an endpoint.
+    time_shift_s: float = 0.0
+    # In the actor's own frame. +ve lateral = actor's left.
+    lateral_offset_m: float = 0.0
+    longitudinal_offset_m: float = 0.0
+    # Log the actor inventory table at rollout construction.
+    log_actor_inventory: bool = False
+
+
+@dataclass
 class SimulationConfig:
     """
     Shared simulation parameters — applies to all scenes.
@@ -350,6 +369,9 @@ class SimulationConfig:
     # Actors that appear for less than this amount of time will be dropped
     # before the simulation starts. Set to 0 to disable filtering.
     min_traffic_duration_us: int = 3_000_000  # 3 s
+
+    # Local addition: offset one non-ego actor to generate a scene variant.
+    perturbation: PerturbationConfig = field(default_factory=PerturbationConfig)
 
     # Which sensorsim bundled-render RPC to use (NONE = one render_rgb per camera).
     render_bundling: RenderBundling = RenderBundling.NONE

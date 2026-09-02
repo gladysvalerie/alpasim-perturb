@@ -13,12 +13,17 @@ from dataclasses import dataclass, replace
 import numpy as np
 from alpasim_grpc.v0.logging_pb2 import RolloutMetadata
 from alpasim_runtime.config import (
+    PerturbationConfig,
     PhysicsUpdateMode,
     RenderBundling,
     RouteGeneratorType,
     RuntimeCameraConfig,
     SimulationConfig,
     VehicleConfig,
+)
+from alpasim_runtime.scenario_perturbation import (
+    log_actor_inventory,
+    perturb_traffic_objects,
 )
 from alpasim_runtime.errors import InvalidSceneError
 from alpasim_runtime.services.renderer import RendererService
@@ -267,6 +272,13 @@ class UnboundRollout:
         # Filter out objects that appear for less than the minimum duration.
         traffic_objects = all_objs_in_window.filter_short_trajectories(
             simulation_config.min_traffic_duration_us
+        )
+
+        _perturb_cfg = getattr(simulation_config, "perturbation", None)
+        if _perturb_cfg is not None and _perturb_cfg.log_actor_inventory:
+            log_actor_inventory(traffic_objects, gt_ego_trajectory, scene_id)
+        traffic_objects = perturb_traffic_objects(
+            traffic_objects, _perturb_cfg, scene_id
         )
 
         # Objects that were dropped from `traffic_objects` but still exist in
