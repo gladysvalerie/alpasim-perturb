@@ -311,6 +311,8 @@ class PerturbationConfig:
     # In the actor's own frame. +ve lateral = actor's left.
     lateral_offset_m: float = 0.0
     longitudinal_offset_m: float = 0.0
+    # Sink actors underground to remove them. -100.0 empties the scene.
+    vertical_offset_m: float = 0.0
     # Log the actor inventory table at rollout construction.
     log_actor_inventory: bool = False
 

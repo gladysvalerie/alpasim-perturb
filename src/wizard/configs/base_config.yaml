@@ -343,6 +343,7 @@ runtime:
       time_shift_s: 0.0
       lateral_offset_m: 0.0
       longitudinal_offset_m: 0.0
+      vertical_offset_m: 0.0
       log_actor_inventory: false
 
     assert_zero_decision_delay: true
