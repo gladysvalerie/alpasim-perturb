@@ -297,6 +297,32 @@ class ForceGtFrameCacheConfig:
 
 
 @dataclass
+class BoxActorConfig:
+    """A new vehicle drawn as a shaded box, driving along the GT ego path.
+
+    It exists in the simulation (trafficsim replay, collisions, metrics) and is
+    painted into every camera frame. Local addition (not upstream).
+    """
+
+    # track id; "box_" is prepended if missing. "" = box_<index>.
+    id: str = ""
+    # Center-to-center distance ahead of the ego along the GT ego path at the
+    # first GT timestamp. Negative = behind the ego.
+    gap_m: float = 20.0
+    # Sideways offset from the ego path; + = left (3.5 ~ one lane).
+    lateral_m: float = 0.0
+    # Speed along the path before the speed event.
+    v0_mps: float = 10.0
+    # Speed change from speed_event_s (seconds from the first GT ego timestamp).
+    # accel < 0 brakes to a stop and holds; > 0 speeds up. < 0 / 0 = disabled.
+    speed_event_s: float = -1.0
+    accel_mps2: float = 0.0
+    length_m: float = 4.5
+    width_m: float = 1.9
+    height_m: float = 1.6
+
+
+@dataclass
 class PerturbationConfig:
     """Offset one non-ego actor's track to create a scene variant.
 
@@ -313,8 +339,19 @@ class PerturbationConfig:
     longitudinal_offset_m: float = 0.0
     # Sink actors underground to remove them. -100.0 empties the scene.
     vertical_offset_m: float = 0.0
+    # Speed change along the actor's own path, starting at speed_event_s
+    # (seconds from the first GT ego timestamp). < 0 = disabled.
+    speed_event_s: float = -1.0
+    # Constant acceleration after the event. < 0 = brake (stops at 0 m/s and
+    # holds), > 0 = speed up. 0 = disabled.
+    speed_accel_mps2: float = 0.0
     # Log the actor inventory table at rollout construction.
     log_actor_inventory: bool = False
+    # New box vehicles (see BoxActorConfig). Independent of actor_id.
+    box_actors: list[BoxActorConfig] = field(default_factory=list)
+    # Debug: outline every real moving actor's bbox in the frames, to check
+    # that box projection lines up with the rendered cars.
+    draw_debug_actor_boxes: bool = False
 
 
 @dataclass

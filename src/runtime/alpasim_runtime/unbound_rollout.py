@@ -22,6 +22,7 @@ from alpasim_runtime.config import (
     VehicleConfig,
 )
 from alpasim_runtime.scenario_perturbation import (
+    add_box_actors,
     log_actor_inventory,
     perturb_traffic_objects,
 )
@@ -214,6 +215,9 @@ class UnboundRollout:
     # a lowered-to-ground trajectory so we can override their rendering.
     hidden_traffic_objs: TrafficObjects | None = None
 
+    # Local addition: outline real actors' bboxes in frames (projection check).
+    draw_debug_actor_boxes: bool = False
+
     render_bundling: RenderBundling = RenderBundling.NONE
 
     # Session seed shared by this rollout's driver and traffic sessions;
@@ -278,7 +282,17 @@ class UnboundRollout:
         if _perturb_cfg is not None and _perturb_cfg.log_actor_inventory:
             log_actor_inventory(traffic_objects, gt_ego_trajectory, scene_id)
         traffic_objects = perturb_traffic_objects(
-            traffic_objects, _perturb_cfg, scene_id
+            traffic_objects, _perturb_cfg, scene_id,
+            scene_start_us=int(gt_ego_trajectory.timestamps_us[0]),
+        )
+        _veh = simulation_config.vehicle or rig.vehicle_config or VehicleConfig()
+        traffic_objects = add_box_actors(
+            traffic_objects,
+            _perturb_cfg,
+            gt_ego_trajectory,
+            ego_center_ahead_m=_veh.aabb_x_offset_m + _veh.aabb_x_m / 2.0,
+            ego_bottom_z_m=_veh.aabb_z_offset_m,
+            scene_id=scene_id,
         )
 
         # Objects that were dropped from `traffic_objects` but still exist in
@@ -381,6 +395,9 @@ class UnboundRollout:
             vehicle_config=vehicle,
             vector_map=vector_map,
             hidden_traffic_objs=hidden_traffic_objs,
+            draw_debug_actor_boxes=bool(
+                getattr(_perturb_cfg, "draw_debug_actor_boxes", False)
+            ),
             render_bundling=simulation_config.render_bundling,
         )
 

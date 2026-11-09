@@ -5,6 +5,7 @@
 
 from __future__ import annotations
 
+import dataclasses
 import logging
 from typing import Any
 
@@ -14,6 +15,7 @@ from alpasim_runtime.config import RenderBundling
 from alpasim_runtime.events.base import Event, EventPriority, EventQueue
 from alpasim_runtime.events.state import RolloutState
 from alpasim_runtime.force_gt_frame_cache import ForceGtFrameKey
+from alpasim_runtime.scenario_perturbation import draw_box_actors, is_box_actor
 from alpasim_runtime.services.driver_service import DriverService
 from alpasim_runtime.services.sensorsim_service import SensorsimService
 from alpasim_runtime.types import Clock, RuntimeCamera
@@ -54,7 +56,7 @@ def _traffic_trajectories(state: RolloutState) -> dict[str, geometry.Trajectory]
     traffic_trajs: dict[str, geometry.Trajectory] = {
         track_id: obj.trajectory
         for track_id, obj in state.traffic_objs.items()
-        if not obj.is_static
+        if not obj.is_static and not is_box_actor(track_id)  # NuRec can't render boxes
     }
     if state.unbound.hidden_traffic_objs:
         for hid, hobj in state.unbound.hidden_traffic_objs.items():
@@ -103,6 +105,46 @@ async def _render_frames(
         )
 
 
+def _paint_boxes(
+    state: RolloutState, sensorsim: SensorsimService, image: ImageWithMetadata
+) -> ImageWithMetadata:
+    """Paint box actors (solid) and, if enabled, real-actor outlines into a frame.
+
+    Runs after rendering/caching, so cached frames stay clean. Box poses are
+    taken at the frame's shutter close, the same time the ego pose is taken.
+    """
+    debug = getattr(state.unbound, "draw_debug_actor_boxes", False)
+    t_us = image.end_timestamp_us
+    boxes = []
+    for track_id, obj in state.traffic_objs.items():
+        box = is_box_actor(track_id)
+        if not box and (not debug or obj.is_static):
+            continue
+        if t_us not in obj.trajectory.time_range_us:
+            continue
+        pose = obj.trajectory.interpolate_pose(t_us).as_se3()
+        boxes.append((obj.aabb, pose, box))
+    if not boxes or t_us not in state.ego_trajectory.time_range_us:
+        return image
+    catalog = getattr(sensorsim, "_camera_catalog", None)
+    if catalog is None:
+        return image
+    try:
+        definition = catalog.get_camera_definition(
+            state.unbound.scene_id, image.camera_logical_id
+        )
+        painted = draw_box_actors(
+            image.image_bytes,
+            boxes,
+            definition,
+            state.ego_trajectory.interpolate_pose(t_us),
+        )
+    except Exception:  # never kill a rollout over the overlay
+        logger.exception("box drawing failed for %s", image.camera_logical_id)
+        return image
+    return dataclasses.replace(image, image_bytes=painted)
+
+
 async def _render_or_replay(
     state: RolloutState,
     sensorsim: SensorsimService,
@@ -147,6 +189,7 @@ async def _render_or_replay(
             for image in images:
                 cache.put(keys[image.camera_logical_id], image.image_bytes)
 
+    images = [_paint_boxes(state, sensorsim, image) for image in images]
     for image in images:
         state.step_context.track_task(driver.submit_image(image))
     state.data_sensorsim_to_driver = driver_data
