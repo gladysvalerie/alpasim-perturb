@@ -415,6 +415,37 @@ def add_box_actors(
 
     out = dict(traffic_objects)
     for i, b in enumerate(boxes):
+        real_id = str(getattr(b, "track_id", "") or "")
+        if real_id:
+            # Reuse a reconstructed car: same scripted path as a box, but NuRec
+            # draws the real car (any pose, incl. rotation). Its own size is used.
+            if real_id not in out:
+                raise ValueError(f"track_id {real_id!r} not in scene {scene_id} (see the actor inventory)")
+            obj = out[real_id]
+            if obj.is_static:
+                raise ValueError(f"track_id {real_id!r} is static; NuRec does not redraw static actors")
+            if is_box_actor(real_id):
+                raise ValueError(f"track_id {real_id!r} is a box actor, not a reconstructed car")
+            traj = _box_trajectory(
+                gt_ego_trajectory,
+                start_ahead_m=ego_center_ahead_m + float(b.gap_m),
+                v0_mps=float(b.v0_mps),
+                event_s=float(b.speed_event_s),
+                accel_mps2=float(b.accel_mps2),
+                lateral_m=float(b.lateral_m),
+                center_z_m=ego_bottom_z_m + float(obj.aabb.z) / 2.0,
+            )
+            orig = obj.trajectory.time_range_us
+            out[real_id] = replace(obj, trajectory=traj)
+            logger.warning(
+                "[REALCAR] scene=%s track=%s class=%s size=%.2fx%.2fx%.2fm gap=%+.1fm lat=%+.2fm "
+                "v0=%.1fm/s speed_event=%.2fs accel=%+.2fm/s2 original track %.1f-%.1f s",
+                scene_id, real_id, obj.label_class, obj.aabb.x, obj.aabb.y, obj.aabb.z,
+                float(b.gap_m), float(b.lateral_m), float(b.v0_mps), float(b.speed_event_s),
+                float(b.accel_mps2), (orig.start - gt_ego_trajectory.time_range_us.start) / 1e6,
+                (orig.stop - gt_ego_trajectory.time_range_us.start) / 1e6,
+            )
+            continue
         box_id = str(getattr(b, "id", "") or f"{BOX_ID_PREFIX}{i}")
         if not is_box_actor(box_id):
             box_id = BOX_ID_PREFIX + box_id

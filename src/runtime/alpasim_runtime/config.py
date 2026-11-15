@@ -306,6 +306,10 @@ class BoxActorConfig:
 
     # track id; "box_" is prepended if missing. "" = box_<index>.
     id: str = ""
+    # Set to a reconstructed (moving) car's track id to use that real car on
+    # this path instead of a drawn box; its own size is used (length/width/
+    # height_m are ignored). "" = draw a box.
+    track_id: str = ""
     # Center-to-center distance ahead of the ego along the GT ego path at the
     # first GT timestamp. Negative = behind the ego.
     gap_m: float = 20.0
