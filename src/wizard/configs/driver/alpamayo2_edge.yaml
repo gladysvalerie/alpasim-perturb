@@ -1,0 +1,62 @@
+# Should be used in defaults list, e.g.
+# - /driver: alpamayo2_edge
+# Type validation happens at driver runtime via OmegaConf.structured merge
+#
+# Alpamayo 2 Edge needs transformers==5.17.0 (the other Alpamayo drivers pin
+# 4.57.1), so the driver runs in its own Python environment outside the
+# containers; see wizard.external_services.driver.
+# Do not combine with +cameras=...: the six cameras come from
+# alpamayo2_edge_configs.yaml.
+
+defaults:
+  - alpamayo2_edge_configs  # Six cameras at 10 Hz + 2.3 s warm-up (runtime side)
+  - _self_                  # YAML values override schema defaults
+
+# Logging level (uses wizard's global setting)
+log_level: ${wizard.log_level}
+
+# Model configuration
+model:
+  model_type: alpamayo2_edge  # Entry-point name in alpasim.models registry
+  # HuggingFace model ID (cached download or hf authentication needed)
+  checkpoint_path: "nvidia/Alpamayo2-Edge"
+  device: "cuda"
+  force_determinism: false
+  # Edge's input preparation validates and resizes uint8 frames on the CPU.
+  image_decode_device: cpu
+  num_trajectory_samples: 1
+  trajectory_selection:
+    strategy: ALWAYS_FIRST  # [ALWAYS_FIRST, CLOSEST_3D, CLOSEST_LATERAL]
+    max_num_distance_points: 64
+    skip_first_n_distance_points: 0
+
+# Server configuration
+host: "0.0.0.0"
+port: ???
+
+# Inference configuration
+inference:
+  use_cameras:
+    - camera_cross_left_120fov
+    - camera_front_wide_120fov
+    - camera_cross_right_120fov
+    - camera_rear_left_70fov
+    - camera_rear_right_70fov
+    - camera_front_tele_30fov
+  max_batch_size: 1
+  subsample_factor: 1
+  # Frames kept per camera: 2.1 s at 10 Hz. The model picks 5 frames (front
+  # wide/tele, -2..0 s) or 3 frames (other cameras, -1..0 s) out of these.
+  context_length: 22
+
+# Route configuration — Edge uses language navigation (built from the route)
+route:
+  use_waypoint_commands: false
+
+# Output configuration (container path; override for the external driver)
+output_dir: "/mnt/output/driver"
+
+trajectory_optimizer:
+  enabled: false
+
+plot_debug_images: false

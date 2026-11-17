@@ -44,6 +44,7 @@ alpamayo1 = "alpasim_driver.models.alpamayo1_model:Alpamayo1Model"
 alpamayo1_5 = "alpasim_driver.models.alpamayo1_5_model:Alpamayo15Model"
 alpamayo1_5_recipes_sft = "alpasim_driver.models.alpamayo1_5_recipes_sft_model:Alpamayo15RecipesSFTModel"
 alpamayo2 = "alpasim_driver.models.alpamayo2_model:Alpamayo2Model"
+alpamayo2_edge = "alpasim_driver.models.alpamayo2_edge_model:Alpamayo2EdgeModel"
 vam = "alpasim_driver.models.vam_model:VAMModel"
 manual = "alpasim_driver.models.manual_model:ManualModel"
 
