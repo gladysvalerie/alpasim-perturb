@@ -5,9 +5,19 @@
 # exp/presets/alpamayo2_comparison_6cam.yaml, and a 2.3 s ground-truth warm-up
 # so the driver holds 2.1 s of frames before its first plan (the Alpamayo 1.x /
 # 2 Super default is 1.7 s).
+#
+# The Edge driver runs outside the containers (own Python env), so use it with
+# driver_source=external_static. The runtime finds it at the address below;
+# start the driver with the same port (port=7090). The command-line override
+# wizard.external_services.driver=[...] only works because this sets the key.
 
 defaults:
   - _self_
+
+wizard:
+  external_services:
+    driver:
+      - "localhost:7090"
 
 runtime:
   simulation_config:
